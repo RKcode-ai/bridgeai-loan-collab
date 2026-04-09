@@ -25,16 +25,9 @@ export async function generateStructuredOutput<T extends z.ZodTypeAny>(
       temperature: 0.2
     });
 
-    const parsed =
-      response.output_parsed ??
-      response.output
-        ?.filter((item): item is Extract<(typeof response.output)[number], { type: 'message' }> => item.type === 'message')
-        .flatMap((item) => item.content)
-        .find((content): content is Extract<(typeof response.output)[number], { type: 'message' }>['content'][number] & { parsed: unknown } => 'parsed' in content)
-        ?.parsed;
-    if (!parsed) return fallback;
+    if (!response.output_parsed) return fallback;
 
-    return schema.parse(parsed);
+    return schema.parse(response.output_parsed);
   } catch {
     return fallback;
   }
