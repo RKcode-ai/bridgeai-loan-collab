@@ -3,10 +3,10 @@
 import { useMemo, useState } from 'react';
 import { AgentPanel } from '@/components/AgentPanel';
 import { EvidencePanel } from '@/components/EvidencePanel';
-import { AnalyzeResponse, BusinessAgentOutput, EngineeringAgentOutput, RetrievedEvidence } from '@/lib/types';
+import { BusinessAgentOutput, EngineeringAgentOutput, RetrievedEvidence } from '@/lib/types';
 
 const SAMPLE_REQUIREMENT =
-  'Add support for a promotional rule where users selecting a 36-month term with credit score above 740 receive a 0.5% reduced interest rate, while keeping monthly payment calculation transparent.';
+  'Add a loan term calculation feature to the loan calculator';
 
 type RepoIndexSummary = {
   summary: string;
@@ -43,7 +43,7 @@ export default function HomePage() {
   const [engineering, setEngineering] = useState<EngineeringAgentOutput | null>(null);
   const [evidence, setEvidence] = useState<RetrievedEvidence | null>(null);
   const [indexing, setIndexing] = useState(false);
-  const [analyzing, setAnalyzing] = useState(false);
+  const [businessLoading, setBusinessLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const indexedBadge = useMemo(() => {
@@ -71,30 +71,28 @@ export default function HomePage() {
     }
   }
 
-  async function onAnalyze() {
+  async function onRunBusinessAgent() {
     setError(null);
-    setAnalyzing(true);
+    setBusinessLoading(true);
 
     try {
-      const res = await fetch('/api/analyze', {
+      const res = await fetch('/api/business-agent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ repoUrl, requirement })
       });
-      const data = (await res.json()) as ({ ok: boolean; error?: string } & Partial<AnalyzeResponse>);
-      if (!res.ok || !data.ok) throw new Error(data.error || 'Failed to analyze requirement');
+      const data = (await res.json()) as { ok: boolean; error?: string; business?: BusinessAgentOutput };
+      if (!res.ok || !data.ok) throw new Error(data.error || 'Failed to run Business Agent');
 
       setBusiness(data.business ?? null);
-      setEngineering(data.engineering ?? null);
-      setEvidence(data.evidence ?? null);
 
       if (!repoInfo) {
         await onIndexRepo();
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to analyze requirement');
+      setError(err instanceof Error ? err.message : 'Failed to run Business Agent');
     } finally {
-      setAnalyzing(false);
+      setBusinessLoading(false);
     }
   }
 
@@ -142,8 +140,8 @@ export default function HomePage() {
           </div>
           <textarea value={requirement} onChange={(e) => setRequirement(e.target.value)} className="input min-h-28" />
           <div className="mt-3">
-            <button className="btn-primary" disabled={analyzing} onClick={onAnalyze}>
-              {analyzing ? 'Analyzing…' : 'Run Business + Engineering Agents'}
+            <button className="btn-primary" disabled={businessLoading} onClick={onRunBusinessAgent}>
+              {businessLoading ? 'Generating…' : 'Run Business Agent'}
             </button>
           </div>
         </div>
@@ -151,24 +149,46 @@ export default function HomePage() {
       </section>
 
       <section className="grid gap-6 lg:grid-cols-2">
-        <AgentPanel title="Business Agent" subtitle="Requirement breakdown for stakeholders" loading={analyzing && !business}>
+        <AgentPanel title="Business Agent" subtitle="Business-ready requirement brief" loading={businessLoading && !business}>
           {!business ? (
-            <p className="text-sm text-slate-400">No output yet. Run analysis to generate a business-aligned implementation brief.</p>
+            <p className="text-sm text-slate-400">No output yet. Run the Business Agent to transform the requirement into a polished delivery brief.</p>
           ) : (
-            <>
-              <p><strong>Feature:</strong> {business.feature_name}</p>
-              <p><strong>Goal:</strong> {business.business_goal}</p>
-              <p><strong>User story:</strong> {business.user_story}</p>
+            <div className="space-y-4 rounded-xl border border-blue-400/20 bg-gradient-to-b from-blue-950/40 to-slate-950/40 p-4">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-blue-200">Feature Name</p>
+                  <p className="mt-1 text-base font-semibold text-white">{business.feature_name}</p>
+                </div>
+                <span className="rounded-full border border-blue-400/40 bg-blue-500/10 px-3 py-1 text-xs font-medium text-blue-200">
+                  Demo Ready
+                </span>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="rounded-lg border border-slate-700/80 bg-slate-900/70 p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-300">Business Goal</p>
+                  <p className="mt-1 text-slate-100">{business.business_goal}</p>
+                </div>
+                <div className="rounded-lg border border-slate-700/80 bg-slate-900/70 p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-300">User Story</p>
+                  <p className="mt-1 text-slate-100">{business.user_story}</p>
+                </div>
+              </div>
+
               <SectionList title="Acceptance criteria" items={business.acceptance_criteria} />
               <SectionList title="Assumptions" items={business.assumptions} />
               <SectionList title="Edge cases" items={business.edge_cases} />
               <SectionList title="Open questions" items={business.open_questions} />
-              <p><strong>Engineering handoff:</strong> {business.handoff_brief}</p>
-            </>
+
+              <div className="rounded-lg border border-blue-400/30 bg-blue-500/10 p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-blue-200">Engineering handoff brief</p>
+                <p className="mt-1 text-slate-100">{business.handoff_brief}</p>
+              </div>
+            </div>
           )}
         </AgentPanel>
 
-        <AgentPanel title="Engineering Agent" subtitle="Repository-grounded technical plan" loading={analyzing && !engineering}>
+        <AgentPanel title="Engineering Agent" subtitle="Repository-grounded technical plan" loading={false}>
           {!engineering ? (
             <p className="text-sm text-slate-400">No output yet. Run analysis to produce a technical implementation plan.</p>
           ) : (

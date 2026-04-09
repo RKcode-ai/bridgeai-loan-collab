@@ -1,15 +1,8 @@
 import OpenAI from 'openai';
+import { zodResponseFormat } from 'openai/helpers/zod';
 import { z } from 'zod';
 
 const client = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
-
-function extractJsonObject(raw: string): string {
-  const match = raw.match(/\{[\s\S]*\}/);
-  if (!match) {
-    throw new Error('Model response did not contain JSON.');
-  }
-  return match[0];
-}
 
 export async function generateStructuredOutput<T extends z.ZodTypeAny>(
   schema: T,
@@ -26,12 +19,15 @@ export async function generateStructuredOutput<T extends z.ZodTypeAny>(
         { role: 'system', content: [{ type: 'input_text', text: systemPrompt }] },
         { role: 'user', content: [{ type: 'input_text', text: userPrompt }] }
       ],
+      text: {
+        format: zodResponseFormat(schema, 'agent_output')
+      },
       temperature: 0.2
     });
 
-    const raw = response.output_text?.trim();
-    if (!raw) return fallback;
-    const parsed = JSON.parse(extractJsonObject(raw));
+    const parsed = response.output_parsed;
+    if (!parsed) return fallback;
+
     return schema.parse(parsed);
   } catch {
     return fallback;
