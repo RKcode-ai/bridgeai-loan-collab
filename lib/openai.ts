@@ -12,6 +12,22 @@ export async function generateStructuredOutput<T extends z.ZodTypeAny>(
 ): Promise<z.infer<T>> {
   if (!client) return fallback;
 
+  import OpenAI from 'openai';
+import { zodTextFormat } from 'openai/helpers/zod';
+import { z } from 'zod';
+
+const client = process.env.OPENAI_API_KEY
+  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  : null;
+
+export async function generateStructuredOutput<T extends z.ZodTypeAny>(
+  schema: T,
+  systemPrompt: string,
+  userPrompt: string,
+  fallback: z.infer<T>
+): Promise<z.infer<T>> {
+  if (!client) return fallback;
+
   try {
     const response = await client.responses.parse({
       model: process.env.OPENAI_MODEL || 'gpt-4.1-mini',
@@ -25,9 +41,10 @@ export async function generateStructuredOutput<T extends z.ZodTypeAny>(
       temperature: 0.2
     });
 
-    if (!response.output_parsed) return fallback;
+    const parsed = (response as { output_parsed?: unknown }).output_parsed;
+    if (!parsed) return fallback;
 
-    return schema.parse(response.output_parsed);
+    return schema.parse(parsed);
   } catch {
     return fallback;
   }

@@ -11,7 +11,13 @@ const TEXT_EXTENSIONS = new Set([
 ]);
 
 export function parseGitHubRepoUrl(url: string): { owner: string; repo: string } {
-  const parsed = new URL(url);
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new Error('Repository URL must be a valid https://github.com/owner/repo link.');
+  }
+
   if (!['github.com', 'www.github.com'].includes(parsed.hostname)) {
     throw new Error('Only github.com public repositories are supported.');
   }
@@ -22,15 +28,21 @@ export function parseGitHubRepoUrl(url: string): { owner: string; repo: string }
 }
 
 async function fetchJson<T>(url: string): Promise<T> {
+  const githubToken = process.env.GITHUB_TOKEN;
   const res = await fetch(url, {
     headers: {
       'User-Agent': 'BridgeAI-MVP',
-      Accept: 'application/vnd.github+json'
+      Accept: 'application/vnd.github+json',
+      ...(githubToken ? { Authorization: `Bearer ${githubToken}` } : {})
     },
     cache: 'no-store'
   });
 
   if (!res.ok) {
+    if (res.status === 403) {
+      throw new Error('GitHub API rate limit reached. Add GITHUB_TOKEN to improve indexing reliability.');
+    }
+
     throw new Error(`GitHub request failed (${res.status}) for ${url}`);
   }
 
@@ -135,10 +147,13 @@ function buildRepoSummary(owner: string, repo: string, branch: string, files: Re
     .join(' ');
 }
 
-export async function buildRepoManifest(repoUrl: string): Promise<RepoManifest> {
+export async function buildRepoManifest(repoUrl: string, options?: { forceRefresh?: boolean }): Promise<RepoManifest> {
   const cacheKey = `repo:${repoUrl}`;
-  const existing = await readRepoCache<RepoManifest>(cacheKey);
-  if (existing) return existing;
+  const forceRefresh = options?.forceRefresh ?? false;
+  if (!forceRefresh) {
+    const existing = await readRepoCache<RepoManifest>(cacheKey);
+    if (existing) return existing;
+  }
 
   const { owner, repo } = parseGitHubRepoUrl(repoUrl);
   type RepoResponse = { default_branch: string; description: string | null };
