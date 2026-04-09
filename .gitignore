@@ -1,6 +1,7 @@
 node_modules
 .next
 out
+# Keep all local env variants ignored; only commit the template file.
 .env
 .env.*
 !.env.example
