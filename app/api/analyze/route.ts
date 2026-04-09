@@ -78,7 +78,7 @@ export async function POST(request: Request) {
     const engineering = await generateStructuredOutput(
       engineeringSchema,
       engineeringSystemPrompt,
-      buildEngineeringUserPrompt(requirement, manifest.summary, evidenceText),
+      buildEngineeringUserPrompt(requirement, business.handoff_brief, manifest.summary, evidenceText),
       engineeringFallback
     );
 
