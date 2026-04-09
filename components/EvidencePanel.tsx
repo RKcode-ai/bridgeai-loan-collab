@@ -5,15 +5,21 @@ type EvidencePanelProps = {
   requirement: string;
   handoffBrief: string | null;
   engineeringPlan: string[];
+  loading?: boolean;
 };
 
-export function EvidencePanel({ evidence, requirement, handoffBrief, engineeringPlan }: EvidencePanelProps) {
+export function EvidencePanel({ evidence, requirement, handoffBrief, engineeringPlan, loading }: EvidencePanelProps) {
   return (
     <section className="card">
-      <h3 className="text-lg font-semibold">Evidence / Traceability</h3>
-      <p className="mt-1 text-sm text-slate-300">
-        BridgeAI uses hierarchical retrieval (repo summary → file summaries → chunks) so only relevant context is sent per request.
-      </p>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h3 className="text-lg font-semibold">Evidence / Traceability</h3>
+          <p className="mt-1 text-sm text-slate-300">
+            BridgeAI uses hierarchical retrieval (repo summary → file summaries → chunks) so only relevant context is sent per request.
+          </p>
+        </div>
+        {loading ? <span className="text-xs text-blue-300">Retrieving evidence…</span> : null}
+      </div>
 
       <div className="mt-4 grid gap-3 md:grid-cols-4">
         <article className="rounded-lg border border-slate-700 bg-slate-950 p-3">
@@ -57,7 +63,9 @@ export function EvidencePanel({ evidence, requirement, handoffBrief, engineering
             <h4 className="text-sm font-medium text-blue-300">Matched file summaries</h4>
             {evidence.matchedFileSummaries.map((file) => (
               <article key={file.path} className="rounded-lg border border-slate-700 bg-slate-950 p-3 text-xs text-slate-200">
-                <div className="mb-1 font-mono text-blue-300">{file.path} · score {file.score}</div>
+                <div className="mb-1 font-mono text-blue-300">
+                  {file.path} · score {file.score}
+                </div>
                 <div>{file.summary}</div>
               </article>
             ))}
