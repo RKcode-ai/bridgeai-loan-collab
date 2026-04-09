@@ -17,6 +17,9 @@ export function EvidencePanel({ evidence, requirement, handoffBrief, engineering
           <p className="mt-1 text-sm text-slate-300">
             BridgeAI uses hierarchical retrieval (repo summary → file summaries → chunks) so only relevant context is sent per request.
           </p>
+          <p className="mt-1 text-xs text-slate-400">
+            This prevents context-window overflow and keeps recommendations grounded in specific files/line ranges.
+          </p>
         </div>
         {loading ? <span className="text-xs text-blue-300">Retrieving evidence…</span> : null}
       </div>

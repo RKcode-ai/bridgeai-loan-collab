@@ -22,6 +22,19 @@ A user can:
   - **Engineering Agent**: impacted files + implementation plan + test plan + risks
 - inspect a **traceability panel** that maps requirement → handoff → retrieved evidence → plan.
 
+## Why the dual-role design matters
+
+BridgeAI deliberately exposes two visible roles instead of one generic assistant:
+
+- **Business Agent** reduces requirement ambiguity first.
+  - Converts broad asks into testable acceptance criteria and edge cases.
+  - Produces a clean handoff brief engineers can act on.
+- **Engineering Agent** consumes that handoff + repo evidence.
+  - Maps intent to real files and implementation steps.
+  - Returns a concrete test plan and delivery risks.
+
+This separation mirrors real product/engineering workflows and makes judge demos easier to follow.
+
 ---
 
 ## One-glance homepage value
@@ -129,8 +142,19 @@ It uses a hierarchical approach:
 3. chunk relevant files,
 4. retrieve only top-ranked summaries/chunks for the requirement,
 5. send only those targeted snippets to the model.
+6. display retrieved evidence in the UI for traceability.
 
 This keeps latency low, reduces token usage, and improves reliability for a hackathon demo.
+
+### Context-window credibility note
+
+BridgeAI is intentionally not RAG-for-everything. It is scoped to the loan-calculator challenge and optimized for demo reliability:
+
+- hard cap on indexed files and file size,
+- language-aware text filtering for likely source/docs/config files,
+- retrieval of only the top evidence slices per run,
+- local cache for repeat demos,
+- optional `GITHUB_TOKEN` support to reduce rate-limit risk.
 
 ---
 
@@ -146,6 +170,14 @@ Recommended live demo:
    - Engineering Agent: impacted files and implementation plan
    - Evidence panel: why those files were selected
 5. End by emphasizing traceability and handoff quality.
+
+### Live demo guardrails (recommended)
+
+Before demo:
+1. Run `npm run typecheck && npm run build`.
+2. Load app and click **Force Re-index (Refresh cache)** once.
+3. Verify the index status and timestamp update.
+4. Keep one fallback line ready: “If the API key is missing, BridgeAI returns deterministic structured output so the demo still runs.”
 
 ---
 
@@ -190,3 +222,20 @@ So BridgeAI gives teams speed, clarity, and trust — exactly what you want in a
 - Public GitHub repositories only (private auth intentionally out of scope).
 - Retrieval quality depends on indexed file coverage and repository structure.
 - Model output quality may vary if API credentials are absent (fallback mode is deterministic).
+- GitHub API can rate-limit unauthenticated indexing; set `GITHUB_TOKEN` for best reliability.
+
+---
+
+## Troubleshooting
+
+### Indexing fails with 403
+- Cause: GitHub API rate limit.
+- Fix: set `GITHUB_TOKEN` in `.env.local`, then click **Force Re-index (Refresh cache)**.
+
+### Outputs look generic
+- Cause: low-relevance retrieval or missing key files in indexed subset.
+- Fix: use a focused requirement and rerun indexing to refresh evidence.
+
+### Build passes but demo feels slow
+- Cause: cold indexing against GitHub on first run.
+- Fix: pre-index your chosen repo before presenting and use cached runs during the demo.
