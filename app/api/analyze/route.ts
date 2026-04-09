@@ -17,9 +17,13 @@ export async function POST(request: Request) {
     const { repoUrl, requirement } = analyzeRequestSchema.parse(body);
 
     const manifest = await buildRepoManifest(repoUrl);
-    const evidence = retrieveRelevantChunks(manifest.chunks, requirement);
+    const evidence = retrieveRelevantChunks(manifest, requirement);
 
-    const evidenceText = evidence.chunks
+    const summaryContext = evidence.matchedFileSummaries
+      .map((file) => `${file.path} (score ${file.score}): ${file.summary}`)
+      .join('\n');
+
+    const evidenceText = `${summaryContext}\n\n` + evidence.chunks
       .map(
         (chunk) =>
           `${chunk.path} (${chunk.startLine}-${chunk.endLine})\n${chunk.text.slice(0, 650)}`

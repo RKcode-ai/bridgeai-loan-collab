@@ -11,11 +11,15 @@ const SAMPLE_REQUIREMENT =
 type RepoIndexSummary = {
   summary: string;
   filesCount: number;
+  folderCount: number;
   chunksCount: number;
   branch: string;
   owner: string;
   repo: string;
   indexedAt: string;
+  likelyLogicFiles: string[];
+  likelyUiFiles: string[];
+  likelyTests: string[];
 };
 
 function SectionList({ title, items }: { title: string; items: string[] }) {
@@ -112,8 +116,17 @@ export default function HomePage() {
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-200">Public GitHub repository URL</label>
             <input value={repoUrl} onChange={(e) => setRepoUrl(e.target.value)} className="input" />
-            <p className="mt-2 text-xs text-slate-400">Status: {indexedBadge}</p>
-            {repoInfo ? <p className="mt-1 text-xs text-slate-400">Indexed at {new Date(repoInfo.indexedAt).toLocaleString()}</p> : null}
+            <p className="mt-2 text-xs text-slate-400">Status: {indexing ? 'Indexing repository…' : indexedBadge}</p>
+            {repoInfo ? (
+              <>
+                <p className="mt-1 text-xs text-slate-400">Indexed at {new Date(repoInfo.indexedAt).toLocaleString()}</p>
+                <p className="mt-1 text-xs text-slate-300">{repoInfo.summary}</p>
+                <p className="mt-1 text-xs text-slate-400">
+                  Indexed folders: {repoInfo.folderCount} · Logic candidates: {repoInfo.likelyLogicFiles.length} · UI candidates:{' '}
+                  {repoInfo.likelyUiFiles.length} · Tests: {repoInfo.likelyTests.length}
+                </p>
+              </>
+            ) : null}
           </div>
           <button className="btn-primary h-10 self-end" disabled={indexing} onClick={onIndexRepo}>
             {indexing ? 'Indexing…' : 'Index Repo'}
