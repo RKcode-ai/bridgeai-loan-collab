@@ -35,3 +35,8 @@ export const analyzeRequestSchema = z.object({
   repoUrl: repoUrlSchema,
   requirement: z.string().min(10, 'Requirement must be at least 10 characters')
 });
+
+export const businessAgentRequestSchema = z.object({
+  repoUrl: repoUrlSchema,
+  requirement: z.string().min(10, 'Requirement must be at least 10 characters')
+});
