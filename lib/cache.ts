@@ -10,8 +10,12 @@ function keyToFileName(key: string): string {
 }
 
 export async function writeRepoCache<T>(key: string, value: T): Promise<void> {
-  await mkdir(CACHE_DIR, { recursive: true });
-  await writeFile(path.join(CACHE_DIR, keyToFileName(key)), JSON.stringify(value, null, 2), 'utf-8');
+  try {
+    await mkdir(CACHE_DIR, { recursive: true });
+    await writeFile(path.join(CACHE_DIR, keyToFileName(key)), JSON.stringify(value, null, 2), 'utf-8');
+  } catch (error) {
+    console.warn('[cache] Failed to persist repository cache. Continuing without local cache.', error);
+  }
 }
 
 export async function readRepoCache<T>(key: string): Promise<T | null> {
