@@ -1,6 +1,9 @@
 node_modules
 .next
 out
-.env.local
+# Keep all local env variants ignored; only commit the template file.
+.env
+.env.*
+!.env.example
 .cache/repos/*.json
 npm-debug.log*
