@@ -13,13 +13,14 @@ function keyToFileName(key: string): string {
 
 export async function writeRepoCache<T>(key: string, value: T): Promise<void> {
   const fileName = keyToFileName(key);
-  const payload = JSON.stringify(value, null, 2);
 
   try {
+    const payload = JSON.stringify(value, null, 2);
     await mkdir(PRIMARY_CACHE_DIR, { recursive: true });
     await writeFile(path.join(PRIMARY_CACHE_DIR, fileName), payload, 'utf-8');
   } catch (error) {
     try {
+      const payload = JSON.stringify(value, null, 2);
       await mkdir(FALLBACK_CACHE_DIR, { recursive: true });
       await writeFile(path.join(FALLBACK_CACHE_DIR, fileName), payload, 'utf-8');
     } catch (fallbackError) {
