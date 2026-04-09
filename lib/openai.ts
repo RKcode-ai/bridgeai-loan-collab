@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import { zodResponseFormat } from 'openai/helpers/zod';
+import { zodTextFormat } from 'openai/helpers/zod';
 import { z } from 'zod';
 
 const client = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
@@ -13,14 +13,14 @@ export async function generateStructuredOutput<T extends z.ZodTypeAny>(
   if (!client) return fallback;
 
   try {
-    const response = await client.responses.create({
+    const response = await client.responses.parse({
       model: process.env.OPENAI_MODEL || 'gpt-4.1-mini',
       input: [
         { role: 'system', content: [{ type: 'input_text', text: systemPrompt }] },
         { role: 'user', content: [{ type: 'input_text', text: userPrompt }] }
       ],
       text: {
-        format: zodResponseFormat(schema, 'agent_output')
+        format: zodTextFormat(schema, 'agent_output')
       },
       temperature: 0.2
     });
