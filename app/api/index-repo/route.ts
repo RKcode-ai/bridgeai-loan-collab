@@ -6,11 +6,13 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const parsed = indexRepoRequestSchema.parse(body);
+    const forceRefresh = typeof body.forceRefresh === 'boolean' ? body.forceRefresh : false;
 
-    const manifest = await buildRepoManifest(parsed.repoUrl);
+    const manifest = await buildRepoManifest(parsed.repoUrl, { forceRefresh });
 
     return NextResponse.json({
       ok: true,
+      cache: forceRefresh ? 'refreshed' : 'cached-or-new',
       manifest: {
         repoUrl: manifest.repoUrl,
         owner: manifest.owner,

@@ -23,6 +23,13 @@ type RepoIndexSummary = {
   likelyTests: string[];
 };
 
+type IndexResponse = {
+  ok: boolean;
+  error?: string;
+  cache?: 'refreshed' | 'cached-or-new';
+  manifest?: RepoIndexSummary;
+};
+
 type BusyState = {
   index: boolean;
   business: boolean;
@@ -60,6 +67,7 @@ export default function HomePage() {
   const [engineering, setEngineering] = useState<EngineeringAgentOutput | null>(null);
   const [evidence, setEvidence] = useState<RetrievedEvidence | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [indexMode, setIndexMode] = useState<'refreshed' | 'cached-or-new' | null>(null);
   const [busy, setBusy] = useState<BusyState>({
     index: false,
     business: false,
@@ -74,18 +82,19 @@ export default function HomePage() {
 
   const canRun = requirement.trim().length >= 10 && repoUrl.trim().length > 0;
 
-  async function indexRepo(url: string): Promise<RepoIndexSummary> {
+  async function indexRepo(url: string, forceRefresh = false): Promise<RepoIndexSummary> {
     const res = await fetch('/api/index-repo', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ repoUrl: url })
+      body: JSON.stringify({ repoUrl: url, forceRefresh })
     });
 
-    const data = (await res.json()) as { ok: boolean; error?: string; manifest?: RepoIndexSummary };
+    const data = (await res.json()) as IndexResponse;
     if (!res.ok || !data.ok || !data.manifest) {
       throw new Error(data.error || 'Failed to index repository');
     }
 
+    setIndexMode(data.cache ?? null);
     setRepoInfo(data.manifest);
     return data.manifest;
   }
@@ -132,12 +141,12 @@ export default function HomePage() {
     setEvidence(data.evidence);
   }
 
-  async function onIndexRepo() {
+  async function onIndexRepo(forceRefresh = false) {
     setError(null);
     setBusy((prev) => ({ ...prev, index: true }));
 
     try {
-      await indexRepo(repoUrl);
+      await indexRepo(repoUrl, forceRefresh);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to index repository');
     } finally {
@@ -213,6 +222,21 @@ export default function HomePage() {
           <p className="rounded-lg border border-slate-700/70 bg-slate-900/60 p-3">2) Enter requirement and run dual-agent flow</p>
           <p className="rounded-lg border border-slate-700/70 bg-slate-900/60 p-3">3) Show impacted files and next engineering steps</p>
         </div>
+        <div className="mt-4 grid gap-3 text-sm text-slate-200 md:grid-cols-2">
+          <div className="rounded-lg border border-slate-700/70 bg-slate-900/60 p-3">
+            <p className="font-semibold text-blue-200">Why two AI roles?</p>
+            <p className="mt-1 text-xs text-slate-300">
+              Business Agent improves requirement quality. Engineering Agent then translates that handoff into file-level execution and testing, reducing
+              ambiguity between teams.
+            </p>
+          </div>
+          <div className="rounded-lg border border-slate-700/70 bg-slate-900/60 p-3">
+            <p className="font-semibold text-blue-200">How we handle context-window limits</p>
+            <p className="mt-1 text-xs text-slate-300">
+              We index once, summarize repo and files, chunk source text, retrieve only top evidence, and send just those snippets to the model.
+            </p>
+          </div>
+        </div>
       </section>
 
       <section className="card mb-6">
@@ -244,6 +268,11 @@ export default function HomePage() {
             {repoInfo ? (
               <>
                 <p className="mt-1 text-xs text-slate-400">Indexed at {new Date(repoInfo.indexedAt).toLocaleString()}</p>
+                {indexMode ? (
+                  <p className="mt-1 text-xs text-slate-400">
+                    Index mode: {indexMode === 'refreshed' ? 'Fresh fetch from GitHub' : 'Used cache when available for faster demo reliability'}
+                  </p>
+                ) : null}
                 <p className="mt-1 text-xs text-slate-300">{repoInfo.summary}</p>
                 <p className="mt-1 text-xs text-slate-400">
                   Indexed folders: {repoInfo.folderCount} · Logic candidates: {repoInfo.likelyLogicFiles.length} · UI candidates:{' '}
@@ -254,9 +283,17 @@ export default function HomePage() {
               <p className="mt-1 text-xs text-slate-500">Tip: click “Run Judges Demo” for a one-click, pitch-ready walkthrough.</p>
             )}
           </div>
-          <button className="btn-secondary h-10 self-end" disabled={busy.index || busy.demo || !repoUrl.trim()} onClick={onIndexRepo}>
+          <button className="btn-secondary h-10 self-end" disabled={busy.index || busy.demo || !repoUrl.trim()} onClick={() => onIndexRepo(false)}>
             {busy.index ? 'Indexing…' : 'Index Repo Only'}
           </button>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-3">
+          <button className="btn-secondary" disabled={busy.index || busy.demo || !repoUrl.trim()} onClick={() => onIndexRepo(true)}>
+            {busy.index ? 'Refreshing…' : 'Force Re-index (Refresh cache)'}
+          </button>
+          <p className="self-center text-xs text-slate-400">
+            Use force re-index right before judging to avoid stale cache and reflect latest repo state.
+          </p>
         </div>
 
         <div className="mt-5">
