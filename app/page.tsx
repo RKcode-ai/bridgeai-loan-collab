@@ -44,6 +44,7 @@ export default function HomePage() {
   const [evidence, setEvidence] = useState<RetrievedEvidence | null>(null);
   const [indexing, setIndexing] = useState(false);
   const [businessLoading, setBusinessLoading] = useState(false);
+  const [engineeringLoading, setEngineeringLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const indexedBadge = useMemo(() => {
@@ -96,6 +97,42 @@ export default function HomePage() {
     }
   }
 
+  async function onRunEngineeringAgent() {
+    if (!business?.handoff_brief) {
+      setError('Run Business Agent first so Engineering Agent receives the handoff brief.');
+      return;
+    }
+
+    setError(null);
+    setEngineeringLoading(true);
+
+    try {
+      const res = await fetch('/api/engineering-agent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          repoUrl,
+          requirement,
+          handoff_brief: business.handoff_brief
+        })
+      });
+      const data = (await res.json()) as {
+        ok: boolean;
+        error?: string;
+        engineering?: EngineeringAgentOutput;
+        evidence?: RetrievedEvidence;
+      };
+      if (!res.ok || !data.ok) throw new Error(data.error || 'Failed to run Engineering Agent');
+
+      setEngineering(data.engineering ?? null);
+      setEvidence(data.evidence ?? null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to run Engineering Agent');
+    } finally {
+      setEngineeringLoading(false);
+    }
+  }
+
   return (
     <main className="mx-auto min-h-screen max-w-7xl px-4 py-8 md:px-6">
       <section className="mb-8 rounded-2xl border border-blue-500/30 bg-gradient-to-r from-slate-950 to-blue-950/70 p-6">
@@ -140,8 +177,11 @@ export default function HomePage() {
           </div>
           <textarea value={requirement} onChange={(e) => setRequirement(e.target.value)} className="input min-h-28" />
           <div className="mt-3">
-            <button className="btn-primary" disabled={businessLoading} onClick={onRunBusinessAgent}>
+            <button className="btn-primary mr-3" disabled={businessLoading} onClick={onRunBusinessAgent}>
               {businessLoading ? 'Generating…' : 'Run Business Agent'}
+            </button>
+            <button className="btn-secondary" disabled={engineeringLoading || !business} onClick={onRunEngineeringAgent}>
+              {engineeringLoading ? 'Generating…' : 'Run Engineering Agent'}
             </button>
           </div>
         </div>
@@ -188,19 +228,19 @@ export default function HomePage() {
           )}
         </AgentPanel>
 
-        <AgentPanel title="Engineering Agent" subtitle="Repository-grounded technical plan" loading={false}>
+        <AgentPanel title="Engineering Agent" subtitle="Repository-grounded technical plan" loading={engineeringLoading && !engineering}>
           {!engineering ? (
-            <p className="text-sm text-slate-400">No output yet. Run analysis to produce a technical implementation plan.</p>
+            <p className="text-sm text-slate-400">No output yet. Run Engineering Agent after business handoff to produce a technical implementation plan.</p>
           ) : (
             <>
               <p><strong>Current system:</strong> {engineering.current_system_summary}</p>
               <div>
-                <h4 className="font-medium text-blue-300">Impacted files</h4>
-                <ul className="mt-1 space-y-2">
+                <h4 className="font-medium text-blue-300">Impacted files (from retrieved evidence)</h4>
+                <ul className="mt-2 space-y-2">
                   {engineering.impacted_files.map((file, idx) => (
-                    <li key={`${file.path}-${idx}`} className="rounded-md border border-slate-700 bg-slate-900/70 p-2 text-sm">
+                    <li key={`${file.path}-${idx}`} className="rounded-md border border-blue-400/30 bg-slate-900/80 p-3 text-sm">
                       <div className="font-mono text-xs text-blue-200">{file.path}</div>
-                      <div className="text-slate-200">{file.why}</div>
+                      <div className="mt-1 text-slate-200">{file.why}</div>
                     </li>
                   ))}
                 </ul>
@@ -215,7 +255,7 @@ export default function HomePage() {
       </section>
 
       <div className="mt-6">
-        <EvidencePanel evidence={evidence} />
+        <EvidencePanel evidence={evidence} requirement={requirement} handoffBrief={business?.handoff_brief ?? null} engineeringPlan={engineering?.implementation_plan ?? []} />
       </div>
     </main>
   );

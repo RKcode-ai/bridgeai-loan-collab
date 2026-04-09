@@ -40,3 +40,9 @@ export const businessAgentRequestSchema = z.object({
   repoUrl: repoUrlSchema,
   requirement: z.string().min(10, 'Requirement must be at least 10 characters')
 });
+
+export const engineeringAgentRequestSchema = z.object({
+  repoUrl: repoUrlSchema,
+  requirement: z.string().min(10, 'Requirement must be at least 10 characters'),
+  handoff_brief: z.string().min(10, 'Business handoff brief must be at least 10 characters')
+});

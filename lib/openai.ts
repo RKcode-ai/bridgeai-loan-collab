@@ -20,12 +20,12 @@ export async function generateStructuredOutput<T extends z.ZodTypeAny>(
         { role: 'user', content: [{ type: 'input_text', text: userPrompt }] }
       ],
       text: {
-        format: zodResponseFormat(schema, 'agent_output')
+        format: zodResponseFormat(schema, 'agent_output') as never
       },
       temperature: 0.2
     });
 
-    const parsed = response.output_parsed;
+    const parsed = (response as { output_parsed?: unknown }).output_parsed;
     if (!parsed) return fallback;
 
     return schema.parse(parsed);
