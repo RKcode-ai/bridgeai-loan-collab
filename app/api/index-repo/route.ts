@@ -19,7 +19,11 @@ export async function POST(request: Request) {
         indexedAt: manifest.indexedAt,
         summary: manifest.summary,
         filesCount: manifest.files.length,
+        folderCount: manifest.folders.length,
         chunksCount: manifest.chunks.length,
+        likelyLogicFiles: manifest.likelyLogicFiles.slice(0, 8),
+        likelyUiFiles: manifest.likelyUiFiles.slice(0, 8),
+        likelyTests: manifest.likelyTests.slice(0, 8),
         topFiles: manifest.files.slice(0, 10)
       }
     });
